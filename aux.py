@@ -4,12 +4,13 @@
 
 from hashlib import sha256
 
+
 FILE_CHUNK = 1024 * 1024 # one megabyte
 
 
-def get_hash(file):
+def get_hash(file, algo=sha256):
     with open(file, 'rb') as source:
-        hasher = sha256()
+        hasher = algo()
         while chunk := source.read(FILE_CHUNK):
             hasher.update(chunk)
-    return hasher.hexdigest()
+    return (hasher.name, hasher.hexdigest())
