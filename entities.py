@@ -63,7 +63,20 @@ class File():
             self._hash_algo, self._hash = get_hash(self.path)
         return self._hash
 
-    def show_details(self):
+    def __eq__(self, other_file):
+        '''Simplified equality test - only file names (base part of path) compared.'''
+        # TODO: advanced comparison should be added - based on size, access/modification time
+        # and as ultimative - based on file hash
+        if not isinstance(other_file, File):
+            raise TypeError('Can compare only <File> instances.')
+        if self.name == other_file.name:
+            return True
+        return False
+
+    def __repr__(self):
+        return f'<File({self.path})>'
+
+    def print_details(self):
         print(f'Path: {self.path}')
         print(f'Name: {self.name}')
         print(f'Created: {self.birthtime}')
@@ -73,20 +86,6 @@ class File():
         print(f'Size: {self.size}')
         print(f'Hash: {self.hash} ({self.hash_algo})')
         return None
-
-    def relative_to(self, folder):
-        return self.path.relative_to(folder)
-
-    def __eq__(self, other_file):
-        '''Simplified equality test'''
-        if not isinstance(other_file, File):
-            raise TypeError('Can compare only <File> instances.')
-        if self.name == other_file.name:
-            return True
-        return False
-
-    def __repr__(self):
-        return f'<File({self.path})>'
 
 
 class Folder():
@@ -100,6 +99,9 @@ class Folder():
     def path(self):
         return self._path
 
+    def __repr__(self):
+        return f'<Folder({self.path})>'
+
     def __len__(self):
         return len(self._files)
 
@@ -107,7 +109,8 @@ class Folder():
         yield from self._files
 
     def __contains__(self, outer_file):
-        for file in self._files:
+        for file in self:
+            '''Simplified equality test'''
             if file == outer_file:
                 return True
         return False
@@ -125,11 +128,11 @@ class Folder():
 
     def _find_relative_path(self, file):
         try:
-            relative_path = file.relative_to(self.path)
+            relative_path = file.path.relative_to(self.path)
         except ValueError as err:
             logger.error(err)
-            logger.error(f'Folder: {self.path}')
-            logger.error(f'File: {file}')
+            logger.error(f'!!!! Folder: {self.path}')
+            logger.error(f'!!!! File: {file}')
         return relative_path
 
     def _is_exists(self, relative_path, other_folder):
@@ -139,6 +142,10 @@ class Folder():
         return False
 
     def difference(self, other_folder):
+        '''
+        <diff_files> should contain files existing in both folder but in <self> files newer.
+        Should be returned together with <missing_files>.
+        '''
         if self.path == other_folder.path:
             raise ValueError('Can not find difference with itself.')
         missing_files = []
@@ -153,17 +160,65 @@ class Folder():
                 # print(f'same file: {file.hash == File(other_folder.path.joinpath(relative_path)).hash}')
         return missing_files
 
-    def print_files(self):
-        for file in self:
-            print(file)
-        return None
-
-    def __repr__(self):
-        return f'<Folder({self.path})>'
-
 
 class Syncronizer():
 
-    def __init__(self, folder_A=None, folder_B=None):
-        self._folder_A = folder_A
-        self._folder_B = folder_B
+    def __init__(self, left_side=None, right_side=None):
+        self._left_side = left_side
+        self._right_side = right_side
+        self._missing_files_left_side = [] # files from LEFT missing in RIGHT
+        self._missing_files_right_side = [] # files from RIGHT missing in LEFT
+        self._different_files_left_side = [] # files existing in LEFT and RIGHT simultaneously, but in LEFT newer
+        self._different_files_right_side = [] # files existing in LEFT and RIGHT simultaneously, but in RIGHT newer
+
+    @property
+    def left_side(self):
+        return self._left_side
+
+    @left_side.setter
+    def left_side(self, folder):
+        if isinstance(folder, Folder):
+            self._left_side = folder
+
+    @property
+    def right_side(self):
+        return self._right_side
+
+    @right_side.setter
+    def right_side(self, folder):
+        if isinstance(folder, Folder):
+            self._right_side = folder
+
+    def __repr__(self):
+        return f'<Syncronizer([{self.left_side}],[{self.right_side}])>'
+
+    def add_left_side(self, left_side):
+        if self.left_side:
+            logger.warning('Left side already specified!')
+        else:
+            self.left_side = left_side
+        return None
+
+    def add_right_side(self, right_side):
+        if self.right_side:
+            logger.warning('Right side already specified!')
+        else:
+            self.right_side = right_side
+        return None
+
+    def _get_state(self):
+        # files from left missing on right side
+        self._missing_files_left_side = self.left_side.difference(self.right_side)
+        # files from right missing on left side
+        self._missing_files_right_side = self.right_side.difference(self.left_side)
+        return None
+
+    def report(self):
+        '''Files to be copied L to R, R to L'''
+        print('>> Following files will be copied from LEFT to RIGHT:')
+        for file in self._missing_files_left_side:
+            print(file)
+        print('>> Following files will be copied from RIGHT to LEFT:')
+        for file in self._missing_files_right_side:
+            print(file)
+        pass

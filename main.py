@@ -6,6 +6,7 @@ from pathlib import Path
 
 from entities import File
 from entities import Folder
+from entities import Syncronizer
 from app_logger import get_logger
 
 
@@ -18,6 +19,7 @@ TEST_FOLDER_B = Path('~/Desktop/Python - my projects/syncronizer/test_files/dir_
 
 if __name__ == '__main__':
     print('*' * 125)
+
     logger = get_logger(__name__)
     logger.info('Logger started')
 
@@ -32,15 +34,14 @@ if __name__ == '__main__':
 
     logger.debug(f'len folder A: {len(folder_A)}')
     logger.debug(f'len folder B: {len(folder_B)}')
-
-    logger.debug('Difference (A to B):')
-    difference_A_B = folder_A.difference(folder_B)
-    for file in difference_A_B:
-        logger.debug(file)
     print('-' * 125)
 
-    logger.debug('Difference (B to A):')
-    difference_B_A = folder_B.difference(folder_A)
-    for file in difference_B_A:
-        logger.debug(file)
+    syncro = Syncronizer()
+    syncro.add_left_side(folder_A)
+    syncro.add_right_side(folder_B)
+    print(syncro)
+    print('-' * 125)
+
+    syncro._get_state()
+    syncro.report()
     print('-' * 125)
