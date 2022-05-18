@@ -44,13 +44,6 @@ if __name__ == '__main__':
     logger.debug(f'len folder D: {len(folder_D)}')
     print('-' * 125)
 
-    for file in folder_D:
-        print(file.name, file.hash, file.size, file.modification_time)
-    print('-' * 125)
-    for file in folder_C:
-        print(file.name, file.hash, file.size, file.modification_time)
-    print('-' * 125)
-
     syncro = Syncronizer()
     syncro.add_left_side(folder_C)
     syncro.add_right_side(folder_D)

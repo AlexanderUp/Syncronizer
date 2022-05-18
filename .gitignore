@@ -1,4 +1,5 @@
 junk_tests.py
+perf_test.py
 *.pyc
 *.profile
 *.db
