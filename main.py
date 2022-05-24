@@ -53,5 +53,8 @@ if __name__ == '__main__':
     syncro.report()
     print('-' * 125)
 
-    syncro.syncronize()
+    # syncro.syncronize()
+    # print('-' * 125)
+
+    # session = folder_C._create_session()
     print('-' * 125)

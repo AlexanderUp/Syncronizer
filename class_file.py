@@ -1,10 +1,31 @@
 # encoding:utf-8
 # Syncronizer project
 # <File> entity
+# <File> database model
 
 from pathlib import Path
+from sqlalchemy import Table
+from sqlalchemy import Column
+from sqlalchemy import Integer
+from sqlalchemy import Float
+from sqlalchemy import String
+from sqlalchemy import MetaData
 
 from aux import get_hash
+
+metadata = MetaData()
+
+files_table = Table('files', metadata,
+                    Column('id', Integer, primary_key=True),
+                    Column('path', String, nullable=False, unique=True),
+                    Column('birthtime', Float, nullable=False),
+                    Column('access_time', Float, nullable=False),
+                    Column('modification_time', Float, nullable=False),
+                    Column('change_time', Float, nullable=False),
+                    Column('size', Integer, nullable=False),
+                    Column('hash_algo', String, nullable=False),
+                    Column('hash', String, nullable=False),
+)
 
 
 class File():
