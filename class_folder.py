@@ -3,25 +3,15 @@
 # <Folder> entity
 
 import os
-import sqlalchemy
-
-from pathlib import Path
-from sqlalchemy.orm import mapper
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import config
 
 from class_file import File
 from class_file import files_table
-from class_file import metadata
 from app_logger import get_logger
 
 
+conf = config.Config()
 logger = get_logger(__name__)
-
-DB_NAME = '_files_db.sqlite'
-
-# mapper(File, files_table, column_prefix='_')
-mapper(File, files_table)
 
 
 class Folder():
@@ -32,7 +22,6 @@ class Folder():
         self._skip_hidden = True
         if path:
             self.update(path)
-
 
     def __repr__(self):
         return f'<Folder({self.path})>'
@@ -54,11 +43,10 @@ class Folder():
         return self._path
 
     @path.setter
-    def path(self, value):
-        if isinstance(value, Path):
-            self._path = value
-        else:
-            raise TypeError('Path object needed!')
+    def path(self, path):
+        if not os.path.exists(path):
+            raise ValueError('Given path does not exist!')
+        self._path = path
 
     @property
     def skip_hidden(self):
@@ -69,7 +57,7 @@ class Folder():
         if isinstance(value, bool):
             self._skip_hidden = value
         else:
-            raise TypeError('Only boolean valeus permitted!')
+            raise TypeError('Only boolean values permitted!')
 
     def update(self, path):
         if not path:
@@ -78,49 +66,23 @@ class Folder():
             raise ValueError('Folder already initiated!')
 
         logger.info(f'Updating... ({path})')
-        self.path = Path(path)
-        self.session = self._create_session()
+        self.path = path
         for dirpath, dirs, files in os.walk(path):
             for file in files:
-                path_to_file = Path(dirpath) / file
-                if path_to_file.name == DB_NAME:
+                path_to_file = os.path.join(dirpath, file)
+
+                if any((func(path_to_file) for func in conf.FILE_NAME_CHECK_FUNCS)):
+                    logger.info(f'Skipped: {path_to_file}')
                     continue
-                if self._skip_hidden and path_to_file.stem.startswith('.'):
-                    logger.debug(f'Skip hidden <{path_to_file}>')
-                    continue
+
                 file_obj = File(path_to_file)
                 self._files.append(file_obj)
                 logger.debug(f'Add file: {file_obj}')
-
-                # print(f'file.path: {file_obj.path}')
-                # print(f'file._path: {file_obj._path}')
-                # print(f'file.hash_algo: {file_obj.hash_algo}')
-
-                self.session.add(file_obj)
-                try:
-                    # self.session.add(file_obj)
-                    self.session.commit()
-                except sqlalchemy.exc.SQLAlchemyError as err:
-                    logger.error(f'{err}')
-                    self.session.rollback()
-                else:
-                    logger.debug(f'Successfully commited: {file_obj}')
-        self.session.close()
         return None
 
-    def get_file_instance(self, path: Path) -> File:
+    def get_file_instance(self, path):
         # probably bottleneck in case of huge amount of file searches
         for file in self:
             if file.path == path:
                 return file
         return None
-
-    def _create_session(self):
-        path_to_db = self.path.joinpath(DB_NAME)
-        engine = create_engine('sqlite:///' + path_to_db.as_posix())
-        logger.info(f'DB engine: {engine}')
-        metadata.create_all(bind=engine)
-        Session = sessionmaker(bind=engine)
-        session = Session()
-        logger.debug(f'Session: {session}')
-        return session

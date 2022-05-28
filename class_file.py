@@ -3,7 +3,8 @@
 # <File> entity
 # <File> database model
 
-from pathlib import Path
+import os
+
 from sqlalchemy import Table
 from sqlalchemy import Column
 from sqlalchemy import Integer
@@ -23,21 +24,21 @@ files_table = Table('files', metadata,
                     Column('modification_time', Float, nullable=False),
                     Column('change_time', Float, nullable=False),
                     Column('size', Integer, nullable=False),
-                    Column('hash_algo', String, nullable=False),
-                    Column('hash', String, nullable=False),
+                    Column('hash_algo', String),
+                    Column('hash', String),
 )
 
 
 class File():
 
     def __init__(self, path):
-        self._path = Path(path).expanduser()
-        self._name = self.path.name
-        self._birthtime = self.path.stat().st_birthtime
-        self._access_time = self.path.stat().st_atime
-        self._modification_time = self.path.stat().st_mtime
-        self._change_time = self.path.stat().st_ctime
-        self._size = self.path.stat().st_size
+        self._path = path
+        self._name = os.path.basename(path)
+        self._birthtime = os.stat(path).st_birthtime
+        self._access_time = os.stat(path).st_atime
+        self._modification_time = os.stat(path).st_mtime
+        self._change_time = os.stat(path).st_ctime
+        self._size = os.stat(path).st_size
         self._hash_algo = None
         self._hash = None
 
@@ -79,9 +80,16 @@ class File():
         If file will be changed after first hash calculation,
         hash will not be recalculated and hash value will not be updated.
         '''
+        self.calculate_hash()
+        return self._hash
+
+    def calculate_hash(self):
         if not self._hash:
             self._hash_algo, self._hash = get_hash(self.path)
-        return self._hash
+        return None
 
     def __repr__(self):
         return f'<File({self.path})>'
+
+    def __eq__(self, other_file):
+        return self.path == other_file.path
